@@ -272,9 +272,10 @@
     to   { transform: rotate(4deg) translateY(-3px); }
   }
 
-  .flower { cursor: pointer; }
+  .flower { cursor: pointer; outline: none; -webkit-tap-highlight-color: transparent; }
   .flower .spin { transition: filter .25s ease; }
-  .flower:hover .spin { filter: brightness(1.15) drop-shadow(0 0 8px rgba(255, 220, 90, .8)); }
+  .flower:hover .spin,
+  .flower:focus-visible .spin { filter: brightness(1.15) drop-shadow(0 0 8px rgba(255, 220, 90, .8)); }
   .spin.pop { animation: pop .9s cubic-bezier(.3, 1.3, .5, 1); }
   @keyframes pop {
     0%   { transform: rotate(0) scale(1); }
