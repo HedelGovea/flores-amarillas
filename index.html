@@ -284,6 +284,75 @@
 
   .wrap-front { pointer-events: none; }
 
+  /* ---------- Pantalla de regalo y música ---------- */
+  .waiting main, .waiting main * { animation-play-state: paused !important; }
+
+  #gift {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    padding: 24px 16px;
+    text-align: center;
+    background: radial-gradient(ellipse at 50% 60%, rgba(58, 42, 85, .92), rgba(11, 16, 38, .97));
+    transition: opacity .8s ease;
+  }
+  .waiting #gift { display: flex; }
+  #gift.leaving { opacity: 0; pointer-events: none; }
+  #gift .gift-icon {
+    font-size: 4.5rem;
+    filter: drop-shadow(0 0 20px rgba(255, 194, 26, .6));
+    animation: giftBounce 1.6s ease-in-out infinite;
+  }
+  @keyframes giftBounce {
+    0%, 100% { transform: translateY(0) rotate(-4deg); }
+    50% { transform: translateY(-10px) rotate(4deg); }
+  }
+  #gift h2 {
+    font-family: "Great Vibes", cursive;
+    font-weight: 400;
+    font-size: clamp(2.4rem, 9vw, 3.4rem);
+    color: var(--gold);
+    text-shadow: 0 0 24px rgba(255, 194, 26, .45);
+  }
+  #gift p { color: var(--text); font-size: 1.05rem; }
+  #gift p strong { color: var(--gold); font-weight: 600; }
+  #gift button { margin-top: 8px; font-size: 1.05rem; padding: 12px 26px; }
+
+  #musicBtn {
+    position: fixed;
+    top: 14px;
+    right: 14px;
+    z-index: 8;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    font-size: 1.2rem;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
+  #musicBtn.off { opacity: .55; }
+  #musicBtn.off::after {
+    content: "";
+    position: absolute;
+    width: 22px;
+    height: 2px;
+    background: var(--text);
+    transform: rotate(-45deg);
+    border-radius: 2px;
+  }
+  #musicBtn.on { animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 194, 26, .35); }
+    50% { box-shadow: 0 0 0 8px rgba(255, 194, 26, 0); }
+  }
+
   /* Quien recibe las flores no ve las opciones para enviarlas */
   .recipient #addFlower,
   .recipient .share { display: none; }
@@ -399,6 +468,16 @@
   </main>
 
   <div id="toast" role="status" aria-live="polite"></div>
+
+  <div id="gift" role="dialog" aria-modal="true" aria-labelledby="giftTitle">
+    <div class="gift-icon" aria-hidden="true">🎁</div>
+    <h2 id="giftTitle">Tienes un regalo</h2>
+    <p id="giftText">Alguien te mandó flores amarillas</p>
+    <button class="primary" id="openGift">Abrir mi regalo 💛</button>
+  </div>
+
+  <button id="musicBtn" class="off" aria-label="Reproducir música" aria-pressed="false">♫</button>
+  <audio id="music" src="Flores%20Amarillas%20-%20Floricienta.m4a" loop preload="auto"></audio>
 
 <script>
 (() => {
@@ -739,7 +818,8 @@
 
   const initialTo = (params.get("para") || "").slice(0, 40);
   const initialFrom = (params.get("de") || "").slice(0, 40);
-  if (initialTo || initialFrom) document.body.classList.add("recipient");
+  const isRecipient = Boolean(initialTo || initialFrom);
+  if (isRecipient) document.body.classList.add("recipient", "waiting");
   toInput.value = initialTo;
   fromInput.value = initialFrom;
   renderDedication(initialTo, initialFrom);
@@ -774,6 +854,62 @@
     }
     shower(30);
   });
+
+  /* ---------------- Música ---------------- */
+  const music = document.getElementById("music");
+  const musicBtn = document.getElementById("musicBtn");
+  music.volume = 0.8;
+
+  function setMusicUI(playing) {
+    musicBtn.classList.toggle("on", playing);
+    musicBtn.classList.toggle("off", !playing);
+    musicBtn.setAttribute("aria-pressed", String(playing));
+    musicBtn.setAttribute("aria-label", playing ? "Pausar música" : "Reproducir música");
+  }
+  music.addEventListener("play", () => setMusicUI(true));
+  music.addEventListener("pause", () => setMusicUI(false));
+
+  const playMusic = () => music.play().catch(() => {});
+
+  musicBtn.addEventListener("click", () => {
+    if (music.paused) playMusic();
+    else music.pause();
+  });
+
+  if (isRecipient) {
+    // Pantalla de regalo: el toque del usuario permite que suene la música
+    const giftText = document.getElementById("giftText");
+    giftText.textContent = "";
+    if (initialFrom) {
+      const strong = document.createElement("strong");
+      strong.textContent = initialFrom;
+      giftText.append(strong, " te mandó flores amarillas");
+    } else {
+      giftText.textContent = "Alguien te mandó flores amarillas";
+    }
+    if (initialTo) {
+      document.getElementById("giftTitle").textContent = `${initialTo}, tienes un regalo`;
+    }
+
+    const gift = document.getElementById("gift");
+    const openBtn = document.getElementById("openGift");
+    openBtn.focus();
+    openBtn.addEventListener("click", () => {
+      playMusic();
+      gift.classList.add("leaving");
+      document.body.classList.remove("waiting");
+      setTimeout(() => { gift.remove(); shower(40); }, 800);
+    }, { once: true });
+  } else {
+    // Si el navegador bloquea el autoplay, empieza con el primer toque
+    music.play().catch(() => {
+      const start = e => {
+        if (e.target.closest("#musicBtn")) return;
+        playMusic();
+      };
+      document.addEventListener("pointerdown", start, { once: true });
+    });
+  }
 })();
 </script>
 </body>
