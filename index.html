@@ -284,6 +284,10 @@
 
   .wrap-front { pointer-events: none; }
 
+  /* Quien recibe las flores no ve las opciones para enviarlas */
+  .recipient #addFlower,
+  .recipient .share { display: none; }
+
   @media (prefers-reduced-motion: reduce) {
     .sway, .star, .firefly { animation: none; }
   }
@@ -735,6 +739,7 @@
 
   const initialTo = (params.get("para") || "").slice(0, 40);
   const initialFrom = (params.get("de") || "").slice(0, 40);
+  if (initialTo || initialFrom) document.body.classList.add("recipient");
   toInput.value = initialTo;
   fromInput.value = initialFrom;
   renderDedication(initialTo, initialFrom);
